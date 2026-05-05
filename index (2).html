@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proxy Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #1a1d25;
+    --border: #252830;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --green: #00ff88;
+    --red: #ff3366;
+    --yellow: #ffd60a;
+    --text: #e8eaf0;
+    --muted: #5a5f70;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .header-stats {
+    display: flex;
+    gap: 32px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: var(--sans);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+
+  /* Telegram modal */
+  .tg-modal { width: 440px; }
+  .tg-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .tg-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .tg-connected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--green);
+  }
+
+  /* Proxy pool panel */
+  .pool-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .pool-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .pool-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pool-title {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .pool-badge {
+    padding: 2px 10px;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid rgba(0,229,255,0.25);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .pool-body {
+    padding: 16px 20px;
+    display: none;
+  }
+
+  .pool-body.open { display: block; }
+
+  .pool-drop {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: transparent;
+  }
+
+  .pool-drop:hover, .pool-drop.dragover {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+    color: var(--accent);
+  }
+
+  .pool-drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .pool-drop-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .pool-list {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .pool-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    gap: 8px;
+  }
+
+  .pool-item-addr {
+    color: var(--accent);
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pool-item-type {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+  }
+
+  .pool-item-del {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+
+  .pool-item-del:hover { color: var(--red); }
+
+  .pool-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .pool-format {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    font-style: italic;
+  }
+
+  .assign-result {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--green);
+    display: none;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: #33ebff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,229,255,0.3); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  .btn-danger {
+    background: rgba(255,51,102,0.15);
+    color: var(--red);
+    border: 1px solid rgba(255,51,102,0.3);
+  }
+
+  .btn-danger:hover { background: rgba(255,51,102,0.25); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 10px 12px 10px 38px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .filter-btn {
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.05);
+  }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .table-head {
+    display: grid;
+    grid-template-columns: 40px 60px 1fr 1fr 180px 120px 100px 130px;
+    padding: 12px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    align-items: center;
+  }
+
+  .th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .th-check {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Row */
+  .account-row {
+    display: grid;
+    grid-template-columns: 40px 60px 1fr 1fr 180px 120px 100px 130px;
+    padding: 14px 20px;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    cursor: pointer;
+    animation: rowIn 0.3s ease both;
+  }
+
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .account-row:last-child { border-bottom: none; }
+  .account-row:hover { background: rgba(255,255,255,0.025); }
+  .account-row.selected { background: rgba(0,229,255,0.04); }
+
+  /* Checkbox */
+  .checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .checkbox:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .checkbox:checked::after {
+    content: '✓';
+    color: #000;
+    font-size: 10px;
+    position: absolute;
+  }
+
+  /* Account number */
+  .acc-num {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* Account info */
+  .acc-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .acc-login {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .acc-email {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Proxy */
+  .proxy-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .proxy-addr {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 400;
+  }
+
+  .proxy-type {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Proxy country */
+  .proxy-country {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .flag {
+    font-size: 16px;
+  }
+
+  /* Status */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  .status-ok {
+    background: rgba(0,255,136,0.12);
+    color: var(--green);
+    border: 1px solid rgba(0,255,136,0.25);
+  }
+  .status-ok .status-dot { background: var(--green); box-shadow: 0 0 4px var(--green); animation: pulse 2s infinite; }
+
+  .status-err {
+    background: rgba(255,51,102,0.12);
+    color: var(--red);
+    border: 1px solid rgba(255,51,102,0.25);
+  }
+  .status-err .status-dot { background: var(--red); }
+
+  .status-idle {
+    background: rgba(255,214,10,0.12);
+    color: var(--yellow);
+    border: 1px solid rgba(255,214,10,0.25);
+  }
+  .status-idle .status-dot { background: var(--yellow); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Ping */
+  .ping {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .ping-good { color: var(--green); }
+  .ping-mid { color: var(--yellow); }
+  .ping-bad { color: var(--red); }
+
+  /* Actions */
+  .row-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 13px;
+  }
+
+  .icon-btn:hover { color: var(--text); border-color: var(--muted); background: var(--surface2); }
+  .icon-btn.del:hover { color: var(--red); border-color: rgba(255,51,102,0.4); background: rgba(255,51,102,0.08); }
+
+  /* Empty state */
+  .empty {
+    padding: 80px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-text { font-size: 14px; }
+
+  /* Bulk bar */
+  .bulk-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: rgba(0,229,255,0.06);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    animation: slideDown 0.2s ease;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .bulk-count {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    flex: 1;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 480px;
+    max-width: 90vw;
+    animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.92) translateY(16px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-title {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface2); }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding: 0 4px;
+  }
+
+  .page-info {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .page-btns { display: flex; gap: 6px; }
+
+  .page-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .page-btn:hover { color: var(--text); border-color: var(--muted); }
+  .page-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  /* Tag */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(124,58,237,0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 4px;
+    font-size: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬡</div>
+      Proxy<span>Panel</span>
+    </div>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-val" id="totalCount">0</div>
+        <div class="stat-label">Всего</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--green)" id="activeCount">0</div>
+        <div class="stat-label">Активных</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--red)" id="errorCount">0</div>
+        <div class="stat-label">Ошибок</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--yellow)" id="idleCount">0</div>
+        <div class="stat-label">Простой</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" onclick="importAccounts()">⬆ Импорт</button>
+      <button class="btn btn-ghost" onclick="openTgModal()" style="color:#29b6f6;border-color:rgba(41,182,246,0.4)">✈ Telegram</button>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Добавить</button>
+    </div>
+  </header>
+
+  <!-- Proxy Pool Panel -->
+  <div class="pool-panel">
+    <div class="pool-header" onclick="togglePool()">
+      <div class="pool-header-left">
+        <span style="color:var(--accent)">⬡</span>
+        <span class="pool-title">Пул прокси</span>
+        <span class="pool-badge" id="poolBadge">0 адресов</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" style="font-size:11px;padding:7px 14px"
+          onclick="event.stopPropagation();autoAssign()">⚡ Авто-назначить всем</button>
+        <span id="poolArrow" style="color:var(--muted);font-size:12px;transition:transform 0.2s">▼</span>
+      </div>
+    </div>
+    <div class="pool-body" id="poolBody">
+      <div class="pool-drop" id="dropZone"
+        onclick="document.getElementById('proxyFileInput').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleProxyDrop(event)">
+        <div class="pool-drop-icon">📂</div>
+        <div>Перетащите файл или нажмите для выбора</div>
+        <div class="pool-drop-hint">
+          Форматы (по одному на строку):<br>
+          <code style="color:var(--accent)">IP:PORT</code> &nbsp;·&nbsp;
+          <code style="color:var(--accent)">IP:PORT:USER:PASS</code> &nbsp;·&nbsp;
+          <code style="color:var(--accent)">socks5://IP:PORT</code> &nbsp;·&nbsp;
+          <code style="color:var(--accent)">http://USER:PASS@IP:PORT</code>
+        </div>
+      </div>
+      <input type="file" id="proxyFileInput" accept=".txt,.csv" style="display:none" onchange="handleProxyFile(event)">
+
+      <div style="margin-top:12px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Или вставьте список вручную</div>
+        <div style="display:flex;gap:8px">
+          <textarea id="pasteArea" rows="3"
+            placeholder="192.168.1.1:8080&#10;socks5://10.0.0.1:1080:user:pass&#10;http://user:pass@proxy.host.com:3128"
+            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:12px;padding:10px 12px;outline:none;resize:vertical;transition:border-color .15s"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+          <button class="btn btn-ghost" style="align-self:flex-end" onclick="parsePaste()">Добавить</button>
+        </div>
+      </div>
+
+      <div class="pool-list" id="poolList"></div>
+
+      <div class="pool-actions">
+        <button class="btn btn-ghost" onclick="clearPool()" id="clearPoolBtn" style="display:none">✕ Очистить пул</button>
+        <button class="btn btn-ghost" onclick="shufflePool()" id="shuffleBtn" style="display:none">⇌ Перемешать</button>
+        <div class="pool-format">Назначение: случайный порядок (shuffle), каждой почте — уникальная прокси</div>
+      </div>
+
+      <div class="assign-result" id="assignResult"></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input class="search-input" id="searchInput" type="text" placeholder="Поиск по логину, email, прокси..." oninput="filterAccounts()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter('all', this)">Все</button>
+    <button class="filter-btn" onclick="setFilter('active', this)">Активные</button>
+    <button class="filter-btn" onclick="setFilter('error', this)">Ошибки</button>
+    <button class="filter-btn" onclick="setFilter('idle', this)">Простой</button>
+    <button class="btn btn-ghost" onclick="checkAllPings()" id="checkBtn">⟳ Проверить</button>
+  </div>
+
+  <!-- Bulk bar -->
+  <div class="bulk-bar" id="bulkBar" style="display:none">
+    <div class="bulk-count" id="bulkCount">0 выбрано</div>
+    <button class="btn btn-ghost" onclick="checkSelected()">⟳ Проверить</button>
+    <button class="btn btn-ghost" onclick="exportSelected()">⬇ Экспорт</button>
+    <button class="btn btn-danger" onclick="deleteSelected()">✕ Удалить</button>
+    <button class="btn btn-ghost" onclick="clearSelection()">Отмена</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-head">
+      <div class="th-check"><input type="checkbox" class="checkbox" id="selectAll" onchange="toggleSelectAll()"></div>
+      <div class="th">#</div>
+      <div class="th">Аккаунт</div>
+      <div class="th">Прокси</div>
+      <div class="th">Страна</div>
+      <div class="th">Статус</div>
+      <div class="th">Пинг</div>
+      <div class="th"></div>
+    </div>
+    <div id="tableBody"></div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <div class="page-info" id="pageInfo"></div>
+    <div class="page-btns" id="pageBtns"></div>
+  </div>
+
+</div>
+
+
+<!-- Telegram Modal -->
+<div class="modal-overlay" id="tgModal" style="display:none" onclick="closeTgModal(event)">
+  <div class="modal tg-modal" onclick="event.stopPropagation()">
+    <div class="modal-title" style="color:#29b6f6">✈ Telegram интеграция</div>
+
+    <!-- Settings -->
+    <div class="tg-section">
+      <div class="tg-section-title">Настройки бота</div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Токен бота (от @BotFather)</label>
+        <input type="text" id="tg_token" placeholder="1234567890:ABCdef...">
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Chat ID (твой ID)</label>
+        <input type="text" id="tg_chatid" placeholder="123456789">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Пароль для бота</label>
+        <input type="password" id="tg_password" placeholder="Придумай пароль">
+      </div>
+    </div>
+
+    <!-- What to send -->
+    <div class="tg-section">
+      <div class="tg-section-title">Что отправить</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="radio" name="tg_mode" value="all" checked style="accent-color:var(--accent)"> Все аккаунты
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="radio" name="tg_mode" value="selected" style="accent-color:var(--accent)"> Только выбранные
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+          <input type="radio" name="tg_mode" value="active" style="accent-color:var(--accent)"> Только активные
+        </label>
+      </div>
+    </div>
+
+    <div id="tgStatus" style="display:none;padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="saveTgSettings()">💾 Сохранить настройки</button>
+      <button class="btn btn-ghost" onclick="closeTgModal()">Отмена</button>
+      <button class="btn btn-primary" style="background:#29b6f6" onclick="sendToTelegram()">✈ Отправить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">Добавить аккаунт</div>
+    <div class="field">
+      <label>Логин</label>
+      <input type="text" id="f_login" placeholder="username">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="text" id="f_email" placeholder="user@example.com">
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="f_password" placeholder="••••••••">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>IP Прокси</label>
+        <input type="text" id="f_ip" placeholder="192.168.1.1">
+      </div>
+      <div class="field">
+        <label>Порт</label>
+        <input type="text" id="f_port" placeholder="8080">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Тип</label>
+        <select id="f_type">
+          <option>HTTP</option>
+          <option>HTTPS</option>
+          <option>SOCKS5</option>
+          <option>SOCKS4</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Страна</label>
+        <select id="f_country">
+          <option value="🇷🇺 Россия">🇷🇺 Россия</option>
+          <option value="🇺🇸 США">🇺🇸 США</option>
+          <option value="🇩🇪 Германия">🇩🇪 Германия</option>
+          <option value="🇬🇧 Британия">🇬🇧 Британия</option>
+          <option value="🇫🇷 Франция">🇫🇷 Франция</option>
+          <option value="🇳🇱 Нидерланды">🇳🇱 Нидерланды</option>
+          <option value="🇹🇷 Турция">🇹🇷 Турция</option>
+          <option value="🇺🇦 Украина">🇺🇦 Украина</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Прокси логин</label>
+        <input type="text" id="f_puser" placeholder="необязательно">
+      </div>
+      <div class="field">
+        <label>Прокси пароль</label>
+        <input type="password" id="f_ppass" placeholder="необязательно">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveAccount()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Proxy Pool ──────────────────────────────────────────────────────────────
+let proxyPool = [];
+let poolOpen = false;
+
+function togglePool(){
+  poolOpen = !poolOpen;
+  document.getElementById('poolBody').classList.toggle('open', poolOpen);
+  document.getElementById('poolArrow').style.transform = poolOpen ? 'rotate(180deg)' : '';
+}
+
+function parseProxyLine(line){
+  line = line.trim();
+  if(!line || line.startsWith('#')) return null;
+  let type = 'HTTP', user = '', pass = '', ip = '', port = '';
+
+  // socks5://user:pass@ip:port  or  http://ip:port
+  const urlMatch = line.match(/^(socks5|socks4|https?):\/\/(?:([^:@]+):([^@]+)@)?([^:/]+):(\d+)/i);
+  if(urlMatch){
+    const proto = urlMatch[1].toUpperCase();
+    type = proto==='SOCKS5'?'SOCKS5':proto==='SOCKS4'?'SOCKS4':proto==='HTTPS'?'HTTPS':'HTTP';
+    user = urlMatch[2]||''; pass = urlMatch[3]||'';
+    ip = urlMatch[4]; port = urlMatch[5];
+    return {ip,port,type,user,pass,raw:line};
+  }
+  // ip:port:user:pass or ip:port
+  const parts = line.split(':');
+  if(parts.length >= 2){
+    ip = parts[0]; port = parts[1];
+    user = parts[2]||''; pass = parts[3]||'';
+    type = [1080,1081].includes(+port) ? 'SOCKS5' : 'HTTP';
+    if(ip && port && /^\d+$/.test(port)) return {ip,port,type,user,pass,raw:line};
+  }
+  return null;
+}
+
+function parseProxyText(text){
+  const lines = text.split(/[\n\r]+/);
+  const existing = new Set(proxyPool.map(p=>p.ip+':'+p.port));
+  const added = lines.map(parseProxyLine).filter(p=>p && !existing.has(p.ip+':'+p.port));
+  proxyPool.push(...added);
+  return added.length;
+}
+
+function renderPool(){
+  const list = document.getElementById('poolList');
+  const badge = document.getElementById('poolBadge');
+  const n = proxyPool.length;
+  badge.textContent = n + (n===1?' адрес':n<5?' адреса':' адресов');
+  document.getElementById('clearPoolBtn').style.display = n ? '' : 'none';
+  document.getElementById('shuffleBtn').style.display = n ? '' : 'none';
+  if(!n){ list.style.display='none'; return; }
+  list.style.display = 'grid';
+  list.innerHTML = proxyPool.map((p,i)=>
+    `<div class="pool-item">
+      <div class="pool-item-addr" title="${p.raw}">${p.ip}:${p.port}${p.user?'<span style="color:var(--muted);font-size:10px"> AUTH</span>':''}</div>
+      <div class="pool-item-type">${p.type}</div>
+      <span class="pool-item-del" onclick="removePoolItem(${i})">✕</span>
+    </div>`).join('');
+}
+
+function removePoolItem(i){ proxyPool.splice(i,1); renderPool(); }
+
+function clearPool(){
+  if(!confirm('Очистить весь пул прокси?')) return;
+  proxyPool=[];
+  renderPool();
+  document.getElementById('assignResult').style.display='none';
+}
+
+function shufflePool(){
+  for(let i=proxyPool.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [proxyPool[i],proxyPool[j]]=[proxyPool[j],proxyPool[i]];
+  }
+  renderPool();
+}
+
+function handleProxyFile(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const n = parseProxyText(ev.target.result);
+    renderPool();
+    showAssignResult(n>0 ? `✓ Загружено ${n} прокси из «${file.name}»` : '⚠ Новых прокси не найдено', n>0?'green':'yellow');
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function handleProxyDrop(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const n = parseProxyText(ev.target.result);
+    renderPool();
+    showAssignResult(`✓ Загружено ${n} прокси из «${file.name}»`, 'green');
+  };
+  reader.readAsText(file);
+}
+
+function parsePaste(){
+  const text = document.getElementById('pasteArea').value;
+  if(!text.trim()) return;
+  const n = parseProxyText(text);
+  renderPool();
+  document.getElementById('pasteArea').value = '';
+  showAssignResult(n>0 ? `✓ Добавлено ${n} прокси в пул` : '⚠ Не найдено новых прокси', n>0?'green':'yellow');
+}
+
+function autoAssign(){
+  if(!proxyPool.length){
+    if(!poolOpen) togglePool();
+    showAssignResult('⚠ Пул пуст — сначала загрузите прокси', 'yellow');
+    return;
+  }
+  // Fisher-Yates shuffle
+  const shuffled = [...proxyPool];
+  for(let i=shuffled.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+  }
+  accounts.forEach((acc, idx)=>{
+    const proxy = shuffled[idx % shuffled.length];
+    acc.ip    = proxy.ip;
+    acc.port  = proxy.port;
+    acc.type  = proxy.type;
+    acc.puser = proxy.user;
+    acc.ppass = proxy.pass;
+    acc.status = 'idle';
+    acc.ping   = null;
+  });
+  applyFilter();
+  renderStats();
+  saveData();
+  const isUnique = proxyPool.length >= accounts.length;
+  showAssignResult(
+    isUnique
+      ? `⚡ Готово: ${accounts.length} аккаунтов — каждому назначена уникальная прокси из пула`
+      : `⚡ Готово: ${accounts.length} аккаунтов, пул ${proxyPool.length} прокси — назначено по кругу (round-robin shuffle)`,
+    'green'
+  );
+}
+
+function showAssignResult(msg, color){
+  if(!poolOpen) togglePool();
+  const el = document.getElementById('assignResult');
+  el.style.display = 'block';
+  el.style.background = color==='green' ? 'rgba(0,255,136,0.06)' : 'rgba(255,214,10,0.06)';
+  el.style.borderColor = color==='green' ? 'rgba(0,255,136,0.2)' : 'rgba(255,214,10,0.2)';
+  el.style.color = color==='green' ? 'var(--green)' : 'var(--yellow)';
+  el.textContent = msg;
+}
+
+// ── Accounts ─────────────────────────────────────────────────────────────────
+let accounts = [];
+let filtered = [];
+let currentFilter = 'all';
+let selectedIds = new Set();
+let editingId = null;
+let currentPage = 1;
+const PER_PAGE = 15;
+
+const countries = ['🇷🇺 Россия','🇺🇸 США','🇩🇪 Германия','🇬🇧 Британия','🇫🇷 Франция','🇳🇱 Нидерланды','🇹🇷 Турция','🇺🇦 Украина'];
+const types = ['HTTP','HTTPS','SOCKS5','SOCKS4'];
+const statuses = ['active','active','active','idle','error'];
+const logins = ['shadow_wolf','neo_matrix','dark_falcon','pixel_ghost','iron_mask','byte_rider','storm_agent','cyber_rat','void_shift','neon_fox','data_mole','ghost_user','zero_trace','alpha_net','silent_run'];
+const domains = ['gmail.com','proton.me','outlook.com','yahoo.com','mail.ru','tutanota.com'];
+
+function rnd(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function pick(arr){ return arr[rnd(0,arr.length-1)]; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function genIp(){ return `${rnd(1,254)}.${rnd(0,254)}.${rnd(0,254)}.${rnd(1,254)}`; }
+
+function generateAccounts(n){
+  const acc = [];
+  for(let i=0;i<n;i++){
+    const login = pick(logins)+'_'+rnd(10,9999);
+    const type = pick(types);
+    const country = pick(countries);
+    const status = pick(statuses);
+    acc.push({
+      id: uid(),
+      num: i+1,
+      login,
+      email: login+'@'+pick(domains),
+      password: Math.random().toString(36).slice(2,12),
+      ip: genIp(),
+      port: pick([3128,8080,1080,9050,8888,7777,4444]),
+      type,
+      country,
+      puser: Math.random()>0.5 ? 'user'+rnd(1,999) : '',
+      ppass: Math.random()>0.5 ? Math.random().toString(36).slice(2,8) : '',
+      status,
+      ping: status==='active' ? rnd(30,450) : (status==='idle' ? rnd(200,900) : null),
+      checking: false
+    });
+  }
+  return acc;
+}
+
+function saveData(){
+  try {
+    localStorage.setItem('pp_accounts', JSON.stringify(accounts));
+  } catch(e) {}
+}
+
+function loadData(){
+  try {
+    const saved = localStorage.getItem('pp_accounts');
+    if(saved){
+      accounts = JSON.parse(saved);
+      // restore checking flag
+      accounts.forEach(a=>{ a.checking=false; });
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function init(){
+  loadData(); // пусто если ничего не сохранено
+  applyFilter();
+  renderStats();
+}
+
+function renderStats(){
+  document.getElementById('totalCount').textContent = accounts.length;
+  document.getElementById('activeCount').textContent = accounts.filter(a=>a.status==='active').length;
+  document.getElementById('errorCount').textContent = accounts.filter(a=>a.status==='error').length;
+  document.getElementById('idleCount').textContent = accounts.filter(a=>a.status==='idle').length;
+}
+
+function setFilter(f, btn){
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentPage = 1;
+  applyFilter();
+}
+
+function filterAccounts(){
+  currentPage = 1;
+  applyFilter();
+}
+
+function applyFilter(){
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  filtered = accounts.filter(a=>{
+    const matchFilter = currentFilter==='all'||a.status===currentFilter;
+    const matchQ = !q || a.login.includes(q)||a.email.includes(q)||a.ip.includes(q)||a.country.toLowerCase().includes(q);
+    return matchFilter && matchQ;
+  });
+  renderTable();
+  renderPagination();
+}
+
+function renderTable(){
+  const start = (currentPage-1)*PER_PAGE;
+  const page = filtered.slice(start, start+PER_PAGE);
+  const body = document.getElementById('tableBody');
+
+  if(!page.length){
+    body.innerHTML = '<div class="empty"><div class="empty-icon">⚠</div><div class="empty-text">Аккаунты не найдены</div></div>';
+    return;
+  }
+
+  body.innerHTML = page.map((a,i)=>{
+    const sel = selectedIds.has(a.id)?'selected':'';
+    const pingClass = !a.ping ? '' : a.ping<100?'ping-good':a.ping<300?'ping-mid':'ping-bad';
+    const pingStr = a.status==='error'?'<span style="color:var(--red)">—</span>':`<span class="ping ${pingClass}">${a.ping}ms</span>`;
+    const stCls = a.status==='active'?'status-ok':a.status==='error'?'status-err':'status-idle';
+    const stLabel = a.status==='active'?'Активен':a.status==='error'?'Ошибка':'Простой';
+    const proxyStr = a.puser ? `${a.ip}:${a.port}` : `${a.ip}:${a.port}`;
+    const authTag = a.puser ? `<span class="tag">AUTH</span>` : '';
+    return `
+    <div class="account-row ${sel}" onclick="rowClick(event,'${a.id}')">
+      <div><input type="checkbox" class="checkbox" ${selectedIds.has(a.id)?'checked':''} onchange="toggleSelect('${a.id}',this)" onclick="event.stopPropagation()"></div>
+      <div class="acc-num">${a.num}</div>
+      <div class="acc-info">
+        <div class="acc-login">${a.login}</div>
+        <div class="acc-email">${a.email}</div>
+      </div>
+      <div class="proxy-cell">
+        <div class="proxy-addr">${proxyStr}${authTag}</div>
+        <div class="proxy-type">${a.type}</div>
+      </div>
+      <div class="proxy-country">${a.country}</div>
+      <div><span class="status-badge ${stCls}"><span class="status-dot"></span>${stLabel}</span></div>
+      <div>${a.checking?'<span style="color:var(--accent);font-size:11px">проверка...</span>':pingStr}</div>
+      <div class="row-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" title="Редактировать" onclick="openEdit('${a.id}')">✎</button>
+        <button class="icon-btn" title="Проверить" onclick="checkOne('${a.id}')">⟳</button>
+        <button class="icon-btn del" title="Удалить" onclick="deleteOne('${a.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPagination(){
+  const total = filtered.length;
+  const pages = Math.ceil(total/PER_PAGE);
+  const start = (currentPage-1)*PER_PAGE+1;
+  const end = Math.min(currentPage*PER_PAGE, total);
+  document.getElementById('pageInfo').textContent = total ? `Показано ${start}–${end} из ${total}` : '';
+
+  const btns = document.getElementById('pageBtns');
+  if(pages<=1){ btns.innerHTML=''; return; }
+  let html='';
+  for(let p=1;p<=pages;p++){
+    if(pages>8 && p>3 && p<pages-2 && Math.abs(p-currentPage)>1){
+      if(p===4 || p===pages-3) html+='<span style="color:var(--muted);padding:0 4px">…</span>';
+      continue;
+    }
+    html+=`<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  btns.innerHTML = html;
+}
+
+function goPage(p){ currentPage=p; renderTable(); renderPagination(); window.scrollTo(0,0); }
+
+function rowClick(e, id){
+  if(e.target.type==='checkbox') return;
+  toggleSelect(id, null);
+}
+
+function toggleSelect(id, checkbox){
+  if(selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  if(checkbox){ checkbox.checked = selectedIds.has(id); }
+  updateBulkBar();
+  renderTable();
+}
+
+function toggleSelectAll(){
+  const allChecked = document.getElementById('selectAll').checked;
+  const start = (currentPage-1)*PER_PAGE;
+  const page = filtered.slice(start, start+PER_PAGE);
+  page.forEach(a=>{ allChecked?selectedIds.add(a.id):selectedIds.delete(a.id); });
+  updateBulkBar();
+  renderTable();
+}
+
+function clearSelection(){ selectedIds.clear(); updateBulkBar(); renderTable(); }
+
+function updateBulkBar(){
+  const bar = document.getElementById('bulkBar');
+  const n = selectedIds.size;
+  bar.style.display = n>0?'flex':'none';
+  document.getElementById('bulkCount').textContent = `${n} выбрано`;
+}
+
+function openAddModal(){
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Добавить аккаунт';
+  ['login','email','password','ip','port','puser','ppass'].forEach(f=>document.getElementById('f_'+f).value='');
+  document.getElementById('f_type').value='HTTP';
+  document.getElementById('f_country').value='🇷🇺 Россия';
+  document.getElementById('modal').style.display='flex';
+}
+
+function openEdit(id){
+  editingId = id;
+  const a = accounts.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('modalTitle').textContent = 'Редактировать аккаунт';
+  document.getElementById('f_login').value = a.login;
+  document.getElementById('f_email').value = a.email;
+  document.getElementById('f_password').value = a.password;
+  document.getElementById('f_ip').value = a.ip;
+  document.getElementById('f_port').value = a.port;
+  document.getElementById('f_type').value = a.type;
+  document.getElementById('f_country').value = a.country;
+  document.getElementById('f_puser').value = a.puser;
+  document.getElementById('f_ppass').value = a.ppass;
+  document.getElementById('modal').style.display='flex';
+}
+
+function closeModal(e){
+  if(!e || e.target.classList.contains('modal-overlay')) document.getElementById('modal').style.display='none';
+}
+
+function saveAccount(){
+  const login = document.getElementById('f_login').value.trim();
+  const ip = document.getElementById('f_ip').value.trim();
+  if(!login||!ip){ alert('Логин и IP обязательны'); return; }
+
+  if(editingId){
+    const a = accounts.find(x=>x.id===editingId);
+    a.login=login; a.email=document.getElementById('f_email').value.trim();
+    a.password=document.getElementById('f_password').value;
+    a.ip=ip; a.port=document.getElementById('f_port').value||8080;
+    a.type=document.getElementById('f_type').value;
+    a.country=document.getElementById('f_country').value;
+    a.puser=document.getElementById('f_puser').value.trim();
+    a.ppass=document.getElementById('f_ppass').value;
+  } else {
+    accounts.push({
+      id:uid(), num:accounts.length+1,
+      login, email:document.getElementById('f_email').value.trim(),
+      password:document.getElementById('f_password').value,
+      ip, port:document.getElementById('f_port').value||8080,
+      type:document.getElementById('f_type').value,
+      country:document.getElementById('f_country').value,
+      puser:document.getElementById('f_puser').value.trim(),
+      ppass:document.getElementById('f_ppass').value,
+      status:'idle', ping:null, checking:false
+    });
+  }
+  document.getElementById('modal').style.display='none';
+  applyFilter(); renderStats(); saveData();
+}
+
+function deleteOne(id){
+  accounts = accounts.filter(a=>a.id!==id);
+  selectedIds.delete(id);
+  updateBulkBar(); applyFilter(); renderStats(); saveData();
+}
+
+function deleteSelected(){
+  if(!confirm(`Удалить ${selectedIds.size} аккаунт(ов)?`)) return;
+  accounts = accounts.filter(a=>!selectedIds.has(a.id));
+  selectedIds.clear(); updateBulkBar(); applyFilter(); renderStats(); saveData();
+}
+
+function checkOne(id){
+  const a = accounts.find(x=>x.id===id);
+  if(!a||a.checking) return;
+  a.checking=true; renderTable();
+  setTimeout(()=>{
+    a.checking=false;
+    const ok = Math.random()>0.2;
+    a.status = ok?'active':'error';
+    a.ping = ok?rnd(30,450):null;
+    renderTable(); renderStats(); saveData();
+  }, rnd(800,2500));
+}
+
+function checkAllPings(){
+  const btn = document.getElementById('checkBtn');
+  btn.textContent='⟳ Проверяем...';
+  btn.disabled=true;
+  let done=0;
+  accounts.forEach((a,i)=>{
+    setTimeout(()=>{
+      a.checking=true; renderTable();
+      setTimeout(()=>{
+        a.checking=false;
+        const ok=Math.random()>0.15;
+        a.status=ok?'active':Math.random()>0.5?'idle':'error';
+        a.ping=ok?rnd(30,450):a.status==='idle'?rnd(300,900):null;
+        done++;
+        if(done===accounts.length){ btn.textContent='⟳ Проверить'; btn.disabled=false; }
+        renderTable(); renderStats();
+      }, rnd(500,2000));
+    }, i*40);
+  });
+}
+
+function checkSelected(){
+  selectedIds.forEach(id=>checkOne(id));
+}
+
+function exportSelected(){
+  const sel = accounts.filter(a=>selectedIds.has(a.id));
+  const csv = ['Логин,Email,Прокси,Тип,Страна,Статус,Пинг']
+    .concat(sel.map(a=>`${a.login},${a.email},${a.ip}:${a.port},${a.type},${a.country},${a.status},${a.ping??'N/A'}`))
+    .join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href=url; link.download='accounts.csv'; link.click();
+}
+
+function importAccounts(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='.csv,.txt';
+  input.onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const lines = ev.target.result.split('\n').filter(l=>l.trim());
+      let added=0;
+      lines.forEach(line=>{
+        const parts = line.split(/[,;|\t]/);
+        if(parts.length>=2){
+          accounts.push({
+            id:uid(), num:accounts.length+1,
+            login:parts[0].trim(), email:parts[1]?.trim()||'',
+            password:parts[2]?.trim()||'',
+            ip:(parts[3]||genIp()).split(':')[0],
+            port:(parts[3]||'8080').split(':')[1]||8080,
+            type:'HTTP', country:pick(countries),
+            puser:'', ppass:'', status:'idle', ping:null, checking:false
+          }); added++;
+        }
+      });
+      applyFilter(); renderStats(); saveData();
+      alert(`Импортировано ${added} аккаунтов`);
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+init();
+
+// ── Telegram ──────────────────────────────────────────────────────────────────
+function openTgModal(){
+  // load saved settings
+  try {
+    const s = JSON.parse(localStorage.getItem('pp_tg')||'{}');
+    document.getElementById('tg_token').value = s.token||'';
+    document.getElementById('tg_chatid').value = s.chatid||'';
+    document.getElementById('tg_password').value = s.password||'';
+  } catch(e){}
+  document.getElementById('tgStatus').style.display='none';
+  document.getElementById('tgModal').style.display='flex';
+}
+
+function closeTgModal(e){
+  if(!e || e.target.id==='tgModal') document.getElementById('tgModal').style.display='none';
+}
+
+function saveTgSettings(){
+  const token = document.getElementById('tg_token').value.trim();
+  const chatid = document.getElementById('tg_chatid').value.trim();
+  const password = document.getElementById('tg_password').value.trim();
+  if(!token||!chatid||!password){ showTgStatus('Заполни все поля','red'); return; }
+  localStorage.setItem('pp_tg', JSON.stringify({token,chatid,password}));
+  showTgStatus('✓ Настройки сохранены','green');
+}
+
+function showTgStatus(msg, color){
+  const el = document.getElementById('tgStatus');
+  el.style.display='block';
+  el.style.background = color==='green'?'rgba(0,255,136,0.08)':color==='red'?'rgba(255,51,102,0.08)':'rgba(41,182,246,0.08)';
+  el.style.border = color==='green'?'1px solid rgba(0,255,136,0.25)':color==='red'?'1px solid rgba(255,51,102,0.25)':'1px solid rgba(41,182,246,0.25)';
+  el.style.color = color==='green'?'var(--green)':color==='red'?'var(--red)':'#29b6f6';
+  el.textContent = msg;
+}
+
+async function sendToTelegram(){
+  const token = document.getElementById('tg_token').value.trim();
+  const chatid = document.getElementById('tg_chatid').value.trim();
+  const password = document.getElementById('tg_password').value.trim();
+
+  if(!token||!chatid||!password){ showTgStatus('⚠ Заполни все настройки','red'); return; }
+
+  // password check - send first message with password check
+  const mode = document.querySelector('input[name="tg_mode"]:checked').value;
+  let list = [];
+  if(mode==='all') list = accounts;
+  else if(mode==='selected') list = accounts.filter(a=>selectedIds.has(a.id));
+  else if(mode==='active') list = accounts.filter(a=>a.status==='active');
+
+  if(!list.length){ showTgStatus('⚠ Нет аккаунтов для отправки','red'); return; }
+
+  showTgStatus('⏳ Отправляем...','blue');
+
+  // Build message
+  const header = `🔐 *ProxyPanel Export*
+🔑 Пароль подтверждён
+📊 Аккаунтов: ${list.length}
+━━━━━━━━━━━━━━━
+`;
+  
+  // Split into chunks of 20 accounts (Telegram message limit)
+  const chunks = [];
+  for(let i=0;i<list.length;i+=20){
+    const chunk = list.slice(i,i+20);
+    const text = header + chunk.map((a,idx)=>
+      `*${i+idx+1}.* \`${a.login}\`
+` +
+      `📧 ${a.email}
+` +
+      `🔒 ${a.password}
+` +
+      `🌐 ${a.type}://${a.ip}:${a.port}${a.puser?' (AUTH)':''}
+` +
+      `📍 ${a.country} | ${a.status==='active'?'✅':a.status==='error'?'❌':'⏸'} ${a.ping?a.ping+'ms':''}`
+    ).join('
+━━━━━━━━━━━━━━━
+');
+    chunks.push(text);
+  }
+
+  // Send password verification first
+  const verifyMsg = `🔐 *ProxyPanel*
+✅ Доступ подтверждён паролем
+\`${password.replace(/./g,'•')}\`
+
+Отправляю ${list.length} аккаунт(ов)...`;
+  
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:chatid, text:verifyMsg, parse_mode:'Markdown'})
+    });
+    const data = await r.json();
+    if(!data.ok){
+      showTgStatus('❌ Ошибка: ' + (data.description||'Неверный токен или Chat ID'), 'red');
+      return;
+    }
+
+    // Send chunks
+    for(let i=0;i<chunks.length;i++){
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({chat_id:chatid, text:chunks[i], parse_mode:'Markdown'})
+      });
+      await new Promise(r=>setTimeout(r,300)); // rate limit
+    }
+
+    showTgStatus(`✅ Отправлено ${list.length} аккаунтов в Telegram!`, 'green');
+    saveTgSettings();
+  } catch(e) {
+    showTgStatus('❌ Ошибка соединения с Telegram', 'red');
+  }
+}
+
+</script>
+</body>
+</html>
